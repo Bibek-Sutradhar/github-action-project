@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS Cloudformation template to create AWS Lambda Function and Dynamo DB
+
+Resources:
+  #Dynamo DB
+  TestDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: MyDynamoDBTable
+      AttributeDefinitions:
+        - AttributeType: S
+          AttributeName: id
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      Tags:
+        - Value: Test
+          Key: Environment
+
+  # IAM Role for Lambda
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: TestLambdaExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaDynamoDBAccessPolicy
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - dynamodb:*
+                Resource: !GetAtt TestDynamoDBTable.Arn
+              - Effect: Allow
+                Action:
+                  - logs:*
+                Resource: "arn:aws:logs:*:*:*"
+
+  # Lambda Function
+  TestLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: TestLambdaFunction
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import os
+
+          dynamodb_client = boto3.resource('dynamodb')
+          table_name = os.environ['TABLE_NAME']
+          table = dynamodb_client.Table(table_name)
+
+          def lambda_handler(event, context):
+            table.put_item(Item={'id': '123', 'data': 'example'})
+            return {
+              'statusCode': 200,
+              'body': json.dumps('Hello from Lambda Function')
+            }
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TestDynamoDBTable
+      Timeout: 900
+      MemorySize: 512
+
+Outputs:
+  DynamoDBTableName:
+    Description: Name of the Dynamo DB Table
+    Value: !Ref TestDynamoDBTable
+
+  LambdaFunctionName:
+    Description: Name of the Lambda Function
+    Value: !Ref TestLambdaFunction
