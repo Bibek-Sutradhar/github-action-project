@@ -1,7 +1,14 @@
 name: Deploy Cloudformation Stack through GitHub Action
 
+# on:
+#   push:
+#     branches:
+#       - main
+
 on:
-  push:
+  workflow_run:
+    workflows: ["Deploy Cloudformation Stack through GitHub Action"]
+    types: [requested]
     branches:
       - main
 
