@@ -6,11 +6,7 @@ name: Deploy Cloudformation Stack through GitHub Action
 #       - main
 
 on:
-  workflow_run:
-    workflows: ["Build"]
-    types: [requested]
-    branches:
-      - main
+  workflow_dispatch
 
 jobs:
   deploy:
